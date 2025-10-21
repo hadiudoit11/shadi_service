@@ -1,0 +1,20 @@
+# Core Django and Auth0 dependencies
+asgiref==3.10.0
+Authlib==1.6.5
+cffi==2.0.0
+cryptography==46.0.3
+Django==5.2.7
+pycparser==2.23
+sqlparse==0.5.3
+
+# Additional dependencies for Auth0 Django quickstart
+python-dotenv>=1.0.0
+
+# Production dependencies (optional)
+gunicorn>=21.0.0
+psycopg2-binary>=2.9.0  # For PostgreSQL
+whitenoise>=6.5.0  # For static files
+
+# Development dependencies (optional)
+django-debug-toolbar>=4.2.0
+django-extensions>=3.2.0
