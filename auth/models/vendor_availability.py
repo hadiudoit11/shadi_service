@@ -1,5 +1,5 @@
 from django.db import models
-from vendor_business import Vendor
+from .vendor_business import Vendor
 
 class VendorAvailability(models.Model):
     """Track vendor availability for specific dates"""

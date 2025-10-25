@@ -1,6 +1,5 @@
 from django.db import models
-from vendor_business import Vendor
-from user_profile import UserProfile
+from .vendor_business import Vendor
 
 
 class VendorInquiry(models.Model):
@@ -15,7 +14,7 @@ class VendorInquiry(models.Model):
     ]
 
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='inquiries')
-    couple_user = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='vendor_inquiries')
+    couple_user = models.ForeignKey('user_profile.EventUser', on_delete=models.CASCADE, related_name='vendor_inquiries')
 
     # Event Details
     event_date = models.DateField()

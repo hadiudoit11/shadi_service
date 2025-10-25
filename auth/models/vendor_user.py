@@ -1,6 +1,5 @@
 from django.db import models
-from vendor_business import Vendor
-from user_profile import UserProfile
+from .vendor_business import Vendor
 
 class VendorUser(models.Model):
     """Relationship between vendors and users who can manage them - permissions via Auth0"""
@@ -13,7 +12,7 @@ class VendorUser(models.Model):
     ]
 
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='vendor_users')
-    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='managed_vendors')
+    user = models.ForeignKey('user_profile.EventUser', on_delete=models.CASCADE, related_name='managed_vendors')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='representative')
 
     # Auth0 metadata for this vendor relationship
