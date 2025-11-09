@@ -12,9 +12,7 @@ WORKDIR /app
 
 # Create non-root user first for security
 RUN groupadd --system django \
-    && useradd --system --group django --home /home/django \
-    && mkdir -p /home/django \
-    && chown django:django /home/django
+    && useradd --system --gid django --home-dir /home/django --create-home django
 
 # Install system dependencies
 RUN apt-get update \
