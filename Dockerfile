@@ -32,12 +32,12 @@ RUN python -m pip install --upgrade pip \
 # Copy project files
 COPY . /app/
 
-# Make entrypoint script executable
-RUN chmod +x /app/docker-entrypoint.sh
-
 # Create necessary directories
 RUN mkdir -p /app/staticfiles /app/media /app/logs \
     && chown -R django:django /app
+
+# Make entrypoint script executable (if it exists)
+RUN if [ -f /app/docker-entrypoint.sh ]; then chmod +x /app/docker-entrypoint.sh; fi
 
 # Switch to non-root user
 USER django
@@ -48,9 +48,6 @@ EXPOSE 8000
 # Health check - simplified to avoid requests dependency in healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/admin/ || exit 1
-
-# Set entrypoint
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # Start the Django application with proper settings
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "--keep-alive", "2", "main.wsgi:application"]
