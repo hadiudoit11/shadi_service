@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from drf_spectacular.utils import extend_schema_view
 from ..models import EventUser
 from .auth_views import Auth0LoginRequiredMixin
 from .api_views import APIResponseMixin
@@ -19,10 +20,21 @@ from ..auth0_permissions import (
     can_edit_schedules,
     can_access_analytics,
 )
+from ..schemas import (
+    event_creation_schema,
+    guest_management_schema,
+    schedule_management_schema,
+    analytics_schema,
+    vendor_management_schema,
+)
 import json
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@extend_schema_view(
+    get=event_creation_schema,
+    post=event_creation_schema,
+)
 class EventCreationAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for event creation and management"""
     
@@ -93,6 +105,11 @@ class EventCreationAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             return self.error_response(f"Validation failed: {str(e)}")
 
 
+@extend_schema_view(
+    get=vendor_management_schema,
+    post=vendor_management_schema,
+    patch=vendor_management_schema,
+)
 class VendorManagementAPIView(CanManageVendorsMixin, Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for vendor management - requires manage:vendors permission"""
     
@@ -118,6 +135,11 @@ class VendorManagementAPIView(CanManageVendorsMixin, Auth0LoginRequiredMixin, AP
         return self.success_response(data)
 
 
+@extend_schema_view(
+    get=guest_management_schema,
+    post=guest_management_schema,
+    patch=guest_management_schema,
+)
 class GuestManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for guest management"""
     
@@ -143,6 +165,11 @@ class GuestManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
         return self.success_response(data)
 
 
+@extend_schema_view(
+    get=schedule_management_schema,
+    post=schedule_management_schema,
+    patch=schedule_management_schema,
+)
 class ScheduleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for schedule/timeline management"""
     
@@ -169,6 +196,9 @@ class ScheduleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View)
         return self.success_response(data)
 
 
+@extend_schema_view(
+    get=analytics_schema,
+)
 class AnalyticsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for wedding analytics and insights"""
     

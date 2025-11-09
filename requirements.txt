@@ -1,20 +1,54 @@
 # Core Django and Auth0 dependencies
-asgiref==3.10.0
-Authlib==1.6.5
-cffi==2.0.0
-cryptography==46.0.3
 Django==5.2.7
-pycparser==2.23
-sqlparse==0.5.3
-
-# Additional dependencies for Auth0 Django quickstart
+djangorestframework==3.14.0
+Authlib==1.6.5
+requests==2.31.0
 python-dotenv>=1.0.0
 
-# Production dependencies (optional)
-gunicorn>=21.0.0
-psycopg2-binary>=2.9.0  # For PostgreSQL
-whitenoise>=6.5.0  # For static files
+# Database
+psycopg2-binary>=2.9.0
+dj-database-url==2.1.0
 
-# Development dependencies (optional)
+# API Documentation
+drf-spectacular==0.26.5
+
+# Production Server
+gunicorn>=21.0.0
+whitenoise>=6.5.0
+
+# Caching and Background Tasks
+redis==5.0.1
+celery==5.3.4
+django-celery-beat==2.5.0
+
+# Static Files and Media
+Pillow==10.1.0
+
+# Security and CORS
+django-cors-headers==4.3.1
+django-ratelimit==4.1.0
+
+# Utilities
+pytz==2023.3
+python-dateutil==2.8.2
+
+# Development dependencies
 django-debug-toolbar>=4.2.0
 django-extensions>=3.2.0
+
+# Code Quality
+flake8==6.1.0
+black==23.11.0
+isort==5.12.0
+
+# Testing
+pytest==7.4.3
+pytest-django==4.7.0
+factory-boy==3.3.0
+
+# Core dependencies (auto-installed)
+asgiref==3.10.0
+cffi==2.0.0
+cryptography==46.0.3
+pycparser==2.23
+sqlparse==0.5.3

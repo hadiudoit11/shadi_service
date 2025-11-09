@@ -1,13 +1,11 @@
-"""
-Auth0 Permission-based View Mixins
-Replace Django's permission system with Auth0 RBAC
-"""
 
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from ..auth0_permissions import Auth0PermissionChecker, Auth0Permissions
 import logging
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +110,7 @@ class CanCreateEventsMixin(Auth0PermissionRequiredMixin):
 
 
 class CanManageVendorsMixin(Auth0PermissionRequiredMixin):
-    permission_required = Auth0Permissions.MANAGE_VENDORS
+    permission_required = Auth0Permissions.MANAGE_VENDOR_RELATIONSHIPS
 
 
 class CanManageGuestsMixin(Auth0PermissionRequiredMixin):

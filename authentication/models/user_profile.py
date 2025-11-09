@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 
 
 
-class UserProfile(AbstractUser):
+class EventUser(AbstractUser):
     # Event Role Choices (Note: Vendors are separate business entities, not user roles)
     BRIDE = 'bride'
     GROOM = 'groom'
@@ -27,18 +27,7 @@ class UserProfile(AbstractUser):
         (ADMIN, 'Admin'),
     ]
     
-    # Subscription Tiers
-    FREE = 'free'
-    BASIC = 'basic'
-    PREMIUM = 'premium'
-    ENTERPRISE = 'enterprise'
-    
-    SUBSCRIPTION_CHOICES = [
-        (FREE, 'Free'),
-        (BASIC, 'Basic'),
-        (PREMIUM, 'Premium'),
-        (ENTERPRISE, 'Enterprise'),
-    ]
+
     
     # Auth0 Fields
     auth0_user_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
@@ -46,11 +35,11 @@ class UserProfile(AbstractUser):
     auth0_picture = models.URLField(blank=True, null=True)
     auth0_nickname = models.CharField(max_length=100, blank=True, null=True)
 
-    # Billing Fields
-    subscription_tier = models.CharField(max_length=20, choices=SUBSCRIPTION_CHOICES, default=FREE)
-    subscription_active = models.BooleanField(default=False)
-    stripe_customer_id = models.CharField(max_length=255, null=True, blank=True)
-    trial_end_date = models.DateTimeField(null=True, blank=True)
+    # # Billing Fields
+    # subscription_tier = models.CharField(max_length=20, choices=SUBSCRIPTION_CHOICES, default=FREE)
+    # subscription_active = models.BooleanField(default=False)
+    # stripe_customer_id = models.CharField(max_length=255, null=True, blank=True)
+    # trial_end_date = models.DateTimeField(null=True, blank=True)
     
     # Auth0 Authorization Fields (instead of hard-coded permissions)
     auth0_roles = models.JSONField(default=list, blank=True, help_text="Auth0 roles assigned to user")

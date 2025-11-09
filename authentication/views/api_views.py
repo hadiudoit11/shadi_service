@@ -2,20 +2,29 @@ from django.http import JsonResponse
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema_view
 from ..models import EventUser
 from .auth_views import Auth0LoginRequiredMixin
-from ..auth0_permissions import (
-    Auth0PermissionChecker, 
-    Auth0Permissions, 
-    Auth0Roles,
-    can_create_events,
-    can_manage_vendors,
-    can_manage_guests,
-    can_edit_schedules,
-    can_access_analytics,
-    can_manage_payments,
+from .auth0_mixins import (
+    Auth0PermissionRequiredMixin,
+    CanCreateEventsMixin,
+    CanManageVendorsMixin,
+    CanManageGuestsMixin,
+    CanEditSchedulesMixin,
+    CanAccessAnalyticsMixin,
+    CanManagePaymentsMixin,
+)
+from ..auth0_permissions import Auth0PermissionChecker
+from ..schemas import (
+    user_profile_get_schema,
+    user_profile_patch_schema,
+    wedding_partner_post_schema,
+    wedding_partner_delete_schema,
+    permissions_get_schema,
+    permissions_post_schema,
+    role_management_get_schema,
+    wedding_data_get_schema,
 )
 import json
 
@@ -42,6 +51,10 @@ class APIResponseMixin:
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@extend_schema_view(
+    get=user_profile_get_schema,
+    patch=user_profile_patch_schema,
+)
 class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for user profile management"""
     
@@ -81,12 +94,12 @@ class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             'auth0_roles': user.auth0_roles,
             'auth0_permissions': user.auth0_permissions,
             'permissions': {
-                'can_create_events': can_create_events(user),
-                'can_manage_vendors': can_manage_vendors(user),
-                'can_edit_schedules': can_edit_schedules(user),
-                'can_manage_guests': can_manage_guests(user),
-                'can_access_analytics': can_access_analytics(user),
-                'can_manage_payments': can_manage_payments(user),
+                'can_create_events': Auth0PermissionChecker.has_permission(user, 'create:events'),
+                'can_manage_vendors': Auth0PermissionChecker.has_permission(user, 'manage:vendors'),
+                'can_edit_schedules': Auth0PermissionChecker.has_permission(user, 'edit:schedules'),
+                'can_manage_guests': Auth0PermissionChecker.has_permission(user, 'manage:guests'),
+                'can_access_analytics': Auth0PermissionChecker.has_permission(user, 'access:analytics'),
+                'can_manage_payments': Auth0PermissionChecker.has_permission(user, 'manage:payments'),
             },
             'last_auth0_sync': user.last_auth0_sync.isoformat() if user.last_auth0_sync else None,
         }
@@ -135,6 +148,10 @@ class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@extend_schema_view(
+    post=wedding_partner_post_schema,
+    delete=wedding_partner_delete_schema,
+)
 class WeddingPartnerAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for wedding partner management"""
     
@@ -190,6 +207,9 @@ class WeddingPartnerAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             return self.error_response(f"Partner unlinking failed: {str(e)}")
 
 
+@extend_schema_view(
+    get=role_management_get_schema,
+)
 class RoleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for role management"""
     
@@ -214,6 +234,10 @@ class RoleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
         return self.success_response(data)
 
 
+@extend_schema_view(
+    get=permissions_get_schema,
+    post=permissions_post_schema,
+)
 class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for user permissions"""
     
@@ -223,12 +247,12 @@ class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
         
         data = {
             'permissions': {
-                'can_create_events': user.can_create_events,
-                'can_manage_vendors': user.can_manage_vendors,
-                'can_edit_schedules': user.can_edit_schedules,
-                'can_manage_attendees': user.can_manage_attendees,
-                'can_access_analytics': user.can_access_analytics,
-                'can_manage_payments': user.can_manage_payments,
+                'can_create_events': Auth0PermissionChecker.has_permission(user, 'create:events'),
+                'can_manage_vendors': Auth0PermissionChecker.has_permission(user, 'manage:vendors'),
+                'can_edit_schedules': Auth0PermissionChecker.has_permission(user, 'edit:schedules'),
+                'can_manage_guests': Auth0PermissionChecker.has_permission(user, 'manage:guests'),
+                'can_access_analytics': Auth0PermissionChecker.has_permission(user, 'access:analytics'),
+                'can_manage_payments': Auth0PermissionChecker.has_permission(user, 'manage:payments'),
             },
             'subscription': {
                 'tier': user.subscription_tier,
@@ -241,10 +265,10 @@ class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
         return self.success_response(data)
     
     def post(self, request):
-        """Refresh permissions based on current roles"""
+        """Refresh permissions from Auth0"""
         try:
             user = request.user
-            user.set_event_permissions()
+            user.sync_auth0_permissions()
             
             return self.success_response(message="Permissions refreshed successfully")
             
@@ -252,6 +276,9 @@ class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             return self.error_response(f"Permission refresh failed: {str(e)}")
 
 
+@extend_schema_view(
+    get=wedding_data_get_schema,
+)
 class WeddingDataAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for wedding-specific data"""
     

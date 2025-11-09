@@ -1,9 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from .user_profile import EventUser
 from .vendor_category import VendorCategory
-
-
 
 
 class Vendor(models.Model):
@@ -14,6 +13,7 @@ class Vendor(models.Model):
     business_email = models.EmailField()
     business_phone = models.CharField(max_length=20, blank=True)
     website = models.URLField(blank=True)
+    admin = models.ForeignKey(EventUser, on_delete=models.CASCADE)
     
     # Service Information
     category = models.ForeignKey(VendorCategory, on_delete=models.CASCADE, related_name='vendors')

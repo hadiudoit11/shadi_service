@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+import dj_database_url
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,7 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'auth',
+    'rest_framework',
+    'drf_spectacular',
+    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -75,10 +82,14 @@ WSGI_APPLICATION = 'main.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(
+        os.getenv(
+            'DATABASE_URL',
+            'postgresql://hadiudoit11:aqcxgixx9antwIOq9IyX8TB3XtSMnG5x@dpg-d47vqeemcj7s73dldjgg-a.virginia-postgres.render.com/shadi_service_stage'
+        ),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -124,13 +135,9 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
-AUTH_USER_MODEL = 'auth.EventUser'
+AUTH_USER_MODEL = 'authentication.EventUser'
 
 # Auth0 Configuration (following Auth0 Django quickstart)
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
 AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
@@ -149,3 +156,44 @@ LOGOUT_REDIRECT_URL = '/'
 # Auth0 specific settings
 AUTH0_SCOPE = 'openid profile email'
 AUTH0_AUDIENCE = ''  # Add if you have an API audience
+
+# Django REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+}
+
+# OpenAPI/Swagger Configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Shadi Wedding Service API',
+    'DESCRIPTION': 'API for wedding event management with Auth0 integration',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'AUTHENTICATION_WHITELIST': ['rest_framework.authentication.SessionAuthentication'],
+    'SERVERS': [
+        {'url': 'http://127.0.0.1:8000', 'description': 'Development server'},
+        {'url': 'https://your-production-domain.com', 'description': 'Production server'},
+    ],
+    'EXTERNAL_DOCS': {
+        'description': 'Auth0 Documentation',
+        'url': 'https://auth0.com/docs',
+    },
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'Auth0 login/logout endpoints'},
+        {'name': 'User Management', 'description': 'User profile and wedding data management'},
+        {'name': 'Event Management', 'description': 'Wedding event creation and management'},
+        {'name': 'Vendor Management', 'description': 'Vendor relationships and business management'},
+        {'name': 'Permissions', 'description': 'Auth0-based permission management'},
+    ],
+}
