@@ -3,7 +3,6 @@ from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
-from drf_spectacular.utils import extend_schema_view
 from ..models import EventUser
 from .auth_views import Auth0LoginRequiredMixin
 from .auth0_mixins import (
@@ -16,16 +15,6 @@ from .auth0_mixins import (
     CanManagePaymentsMixin,
 )
 from ..auth0_permissions import Auth0PermissionChecker
-from ..schemas import (
-    user_profile_get_schema,
-    user_profile_patch_schema,
-    wedding_partner_post_schema,
-    wedding_partner_delete_schema,
-    permissions_get_schema,
-    permissions_post_schema,
-    role_management_get_schema,
-    wedding_data_get_schema,
-)
 import json
 
 
@@ -51,10 +40,6 @@ class APIResponseMixin:
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-@extend_schema_view(
-    get=user_profile_get_schema,
-    patch=user_profile_patch_schema,
-)
 class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for user profile management"""
     
@@ -148,10 +133,6 @@ class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-@extend_schema_view(
-    post=wedding_partner_post_schema,
-    delete=wedding_partner_delete_schema,
-)
 class WeddingPartnerAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for wedding partner management"""
     
@@ -207,9 +188,6 @@ class WeddingPartnerAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             return self.error_response(f"Partner unlinking failed: {str(e)}")
 
 
-@extend_schema_view(
-    get=role_management_get_schema,
-)
 class RoleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for role management"""
     
@@ -234,10 +212,6 @@ class RoleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
         return self.success_response(data)
 
 
-@extend_schema_view(
-    get=permissions_get_schema,
-    post=permissions_post_schema,
-)
 class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for user permissions"""
     
@@ -276,9 +250,6 @@ class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             return self.error_response(f"Permission refresh failed: {str(e)}")
 
 
-@extend_schema_view(
-    get=wedding_data_get_schema,
-)
 class WeddingDataAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
     """API endpoint for wedding-specific data"""
     
