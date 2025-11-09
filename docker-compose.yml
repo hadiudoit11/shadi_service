@@ -121,4 +121,4 @@ volumes:
 
 networks:
   default:
-    name: shadi_network
+    name: shadi_app

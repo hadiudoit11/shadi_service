@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Development overrides for the web service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=main.settings
+    volumes:
+      - ./:/app
+      - /app/local_env  # Exclude local virtual environment
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    
+  # Remove nginx and celery services for development
+  nginx:
+    profiles: ["production"]
+    
+  celery:
+    profiles: ["production"]
+    
+  celery-beat:
+    profiles: ["production"]

@@ -1,54 +1,20 @@
 # Core Django and Auth0 dependencies
-Django==5.2.7
-djangorestframework==3.14.0
-Authlib==1.6.5
-requests==2.31.0
+Django>=4.2,<6.0
+djangorestframework>=3.14.0
+Authlib>=1.6.5
+requests>=2.31.0
 python-dotenv>=1.0.0
 
 # Database
 psycopg2-binary>=2.9.0
-dj-database-url==2.1.0
+dj-database-url>=2.1.0
 
 # API Documentation
-drf-spectacular==0.26.5
+drf-spectacular>=0.26.5
 
 # Production Server
 gunicorn>=21.0.0
 whitenoise>=6.5.0
 
-# Caching and Background Tasks
-redis==5.0.1
-celery==5.3.4
-django-celery-beat==2.5.0
-
 # Static Files and Media
-Pillow==10.1.0
-
-# Security and CORS
-django-cors-headers==4.3.1
-django-ratelimit==4.1.0
-
-# Utilities
-pytz==2023.3
-python-dateutil==2.8.2
-
-# Development dependencies
-django-debug-toolbar>=4.2.0
-django-extensions>=3.2.0
-
-# Code Quality
-flake8==6.1.0
-black==23.11.0
-isort==5.12.0
-
-# Testing
-pytest==7.4.3
-pytest-django==4.7.0
-factory-boy==3.3.0
-
-# Core dependencies (auto-installed)
-asgiref==3.10.0
-cffi==2.0.0
-cryptography==46.0.3
-pycparser==2.23
-sqlparse==0.5.3
+Pillow>=10.0.0

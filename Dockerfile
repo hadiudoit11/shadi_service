@@ -5,9 +5,16 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=main.settings
+ENV PATH="/home/django/.local/bin:$PATH"
 
 # Set work directory
 WORKDIR /app
+
+# Create non-root user first for security
+RUN groupadd --system django \
+    && useradd --system --group django --home /home/django \
+    && mkdir -p /home/django \
+    && chown django:django /home/django
 
 # Install system dependencies
 RUN apt-get update \
@@ -15,28 +22,24 @@ RUN apt-get update \
         postgresql-client \
         build-essential \
         libpq-dev \
-        git \
-    && rm -rf /var/lib/apt/lists/*
+        curl \
+        && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+        && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copy requirements and install Python dependencies as root
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . /app/
 
-# Create directory for static files
-RUN mkdir -p /app/staticfiles
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
-# Create non-root user for security
-RUN addgroup --system django \
-    && adduser --system --group django
-
-# Change ownership of the app directory
-RUN chown -R django:django /app
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/media /app/logs \
+    && chown -R django:django /app
 
 # Switch to non-root user
 USER django
@@ -44,9 +47,12 @@ USER django
 # Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/auth/api/permissions/', timeout=10)"
+# Health check - simplified to avoid requests dependency in healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/admin/ || exit 1
 
-# Start the Django application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main.wsgi:application"]
+# Set entrypoint
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
+# Start the Django application with proper settings
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "--keep-alive", "2", "main.wsgi:application"]
