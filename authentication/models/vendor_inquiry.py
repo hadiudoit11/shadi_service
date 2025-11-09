@@ -23,8 +23,8 @@ class VendorInquiry(models.Model):
     event_date = models.DateField()
     event_location = models.CharField(max_length=200)
     guest_count = models.PositiveIntegerField()
-    budget_range_high = models.PositiveIntegerField(max_length=100, blank=True)
-    budget_range_low = models.PositiveIntegerField(max_length=100, blank=True)
+    budget_range_high = models.PositiveIntegerField(blank=True, null=True)
+    budget_range_low = models.PositiveIntegerField(blank=True, null=True)
 
     # Inquiry Details
     message = models.TextField()

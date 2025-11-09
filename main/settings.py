@@ -30,7 +30,11 @@ SECRET_KEY = 'django-insecure-_kz(%0(ge2t7s2rcbfl9zan_hd*tzni)(e=@pzw+@1=u2t*j54
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'shadi-service.onrender.com',
+    'localhost',
+    '0.0.0.0'
+]
 
 
 # Application definition
@@ -128,6 +132,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Media files (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
