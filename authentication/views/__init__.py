@@ -14,15 +14,18 @@ from .api_views import (
     RoleManagementAPIView,
     PermissionsAPIView,
     WeddingDataAPIView,
-    APIResponseMixin,
 )
 
 from .event_views import (
     EventCreationAPIView,
-    VendorManagementAPIView,
     GuestManagementAPIView,
     ScheduleManagementAPIView,
     AnalyticsAPIView,
+)
+
+from .vendor_views import (
+    VendorListAPIView,
+    VendorDetailAPIView,
 )
 
 __all__ = [
@@ -41,12 +44,14 @@ __all__ = [
     'RoleManagementAPIView',
     'PermissionsAPIView',
     'WeddingDataAPIView',
-    'APIResponseMixin',
     
     # Event Management Views
     'EventCreationAPIView',
-    'VendorManagementAPIView',
     'GuestManagementAPIView',
     'ScheduleManagementAPIView',
     'AnalyticsAPIView',
+    
+    # Vendor Views
+    'VendorListAPIView',
+    'VendorDetailAPIView',
 ]

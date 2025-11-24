@@ -33,7 +33,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'shadi-service.onrender.com',
     'localhost',
-    '0.0.0.0'
+    '0.0.0.0',
+    '192.168.1.220'
 ]
 
 
@@ -48,11 +49,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'drf_spectacular',
+    'corsheaders',
     'authentication',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -169,7 +172,8 @@ AUTH0_AUDIENCE = ''  # Add if you have an API audience
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        'authentication.auth0_jwt.Auth0JSONWebTokenAuthentication',  # Auth0 JWT tokens
+        'rest_framework.authentication.SessionAuthentication',      # Fallback for web interface
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -206,3 +210,32 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Permissions', 'description': 'Auth0-based permission management'},
     ],
 }
+
+# CORS Configuration
+# Allow frontend to make requests to Django backend
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",      # Next.js development server
+    "http://127.0.0.1:3000",     # Alternative localhost
+    "http://localhost:3001",      # Alternative frontend port
+    "http://127.0.0.1:3001",     # Alternative frontend port
+]
+
+# Allow credentials (cookies, authorization headers)
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow specific headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Development setting - be more permissive in development
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True

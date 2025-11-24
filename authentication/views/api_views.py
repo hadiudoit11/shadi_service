@@ -1,48 +1,33 @@
-from django.http import JsonResponse
-from django.views.generic import View
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from ..models import EventUser
-from .auth_views import Auth0LoginRequiredMixin
-from .auth0_mixins import (
-    Auth0PermissionRequiredMixin,
-    CanCreateEventsMixin,
-    CanManageVendorsMixin,
-    CanManageGuestsMixin,
-    CanEditSchedulesMixin,
-    CanAccessAnalyticsMixin,
-    CanManagePaymentsMixin,
-)
 from ..auth0_permissions import Auth0PermissionChecker
+from ..schemas import (
+    EventUserSchema,
+    VendorSchema,
+    ServiceSchema,
+)
+from datetime import datetime
 import json
 
 
-class APIResponseMixin:
-    """Mixin for consistent API responses"""
-    
-    def success_response(self, data=None, message="Success"):
-        return JsonResponse({
-            'success': True,
-            'message': message,
-            'data': data or {}
-        })
-    
-    def error_response(self, message="Error", status=400, errors=None):
-        response_data = {
-            'success': False,
-            'message': message,
-        }
-        if errors:
-            response_data['errors'] = errors
-        
-        return JsonResponse(response_data, status=status)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class UserProfileAPIView(APIView):
     """API endpoint for user profile management"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get user profile",
+        description="Retrieve current user's profile data including roles, permissions, and wedding details",
+        responses={
+            200: EventUserSchema,
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['User Management']
+    )
     def get(self, request):
         """Get user profile data"""
         user = request.user
@@ -75,7 +60,6 @@ class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             } if partner else None,
             'subscription_tier': user.subscription_tier,
             'subscription_active': user.subscription_active,
-            # Auth0-based permissions instead of hard-coded
             'auth0_roles': user.auth0_roles,
             'auth0_permissions': user.auth0_permissions,
             'permissions': {
@@ -89,12 +73,27 @@ class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             'last_auth0_sync': user.last_auth0_sync.isoformat() if user.last_auth0_sync else None,
         }
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Profile retrieved successfully',
+            'data': data
+        })
     
+    @extend_schema(
+        summary="Update user profile",
+        description="Update user profile information including personal details and wedding information",
+        request=EventUserSchema,
+        responses={
+            200: OpenApiResponse(description="Profile updated successfully"),
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['User Management']
+    )
     def patch(self, request):
         """Update user profile"""
         try:
-            data = json.loads(request.body)
+            data = request.data
             user = request.user
             
             # Update basic fields
@@ -109,7 +108,6 @@ class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             
             # Handle wedding date
             if 'wedding_date' in data and data['wedding_date']:
-                from datetime import datetime
                 user.wedding_date = datetime.fromisoformat(data['wedding_date']).date()
             
             # Handle roles
@@ -122,51 +120,91 @@ class UserProfileAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             user.full_clean()
             user.save()
             
-            return self.success_response(message="Profile updated successfully")
+            return Response({
+                'success': True,
+                'message': 'Profile updated successfully'
+            })
             
-        except json.JSONDecodeError:
-            return self.error_response("Invalid JSON data")
         except ValidationError as e:
-            return self.error_response("Validation error", errors=e.message_dict)
+            return Response({
+                'success': False,
+                'message': 'Validation error',
+                'errors': e.message_dict
+            }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return self.error_response(f"Update failed: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Update failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class WeddingPartnerAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class WeddingPartnerAPIView(APIView):
     """API endpoint for wedding partner management"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Link wedding partner",
+        description="Link current user with their wedding partner",
+        request=None,
+        responses={
+            200: OpenApiResponse(description="Partner linked successfully"),
+            400: OpenApiResponse(description="Invalid data or linking error"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['User Management']
+    )
     def post(self, request):
         """Link wedding partner"""
         try:
-            data = json.loads(request.body)
+            data = request.data
             partner_email = data.get('partner_email')
             
             if not partner_email:
-                return self.error_response("Partner email is required")
+                return Response({
+                    'success': False,
+                    'message': 'Partner email is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             try:
                 partner = EventUser.objects.get(email=partner_email)
             except EventUser.DoesNotExist:
-                return self.error_response("Partner not found")
+                return Response({
+                    'success': False,
+                    'message': 'Partner not found'
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             user = request.user
             
             if not (user.is_bride_or_groom and partner.is_bride_or_groom):
-                return self.error_response("Both users must be bride or groom to link as partners")
+                return Response({
+                    'success': False,
+                    'message': 'Both users must be bride or groom to link as partners'
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             user.link_wedding_partner(partner)
             
-            return self.success_response(
-                data={'partner_name': partner.display_name},
-                message="Wedding partner linked successfully"
-            )
+            return Response({
+                'success': True,
+                'message': 'Wedding partner linked successfully',
+                'data': {'partner_name': partner.display_name}
+            })
             
-        except json.JSONDecodeError:
-            return self.error_response("Invalid JSON data")
         except Exception as e:
-            return self.error_response(f"Partner linking failed: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Partner linking failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        summary="Unlink wedding partner",
+        description="Remove link between current user and their wedding partner",
+        responses={
+            200: OpenApiResponse(description="Partner unlinked successfully"),
+            400: OpenApiResponse(description="No partner to unlink"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['User Management']
+    )
     def delete(self, request):
         """Unlink wedding partner"""
         try:
@@ -174,7 +212,10 @@ class WeddingPartnerAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             partner = user.get_wedding_partner()
             
             if not partner:
-                return self.error_response("No partner to unlink")
+                return Response({
+                    'success': False,
+                    'message': 'No partner to unlink'
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             # Unlink both sides
             user.partner = None
@@ -182,15 +223,31 @@ class WeddingPartnerAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             user.save()
             partner.save()
             
-            return self.success_response(message="Wedding partner unlinked successfully")
+            return Response({
+                'success': True,
+                'message': 'Wedding partner unlinked successfully'
+            })
             
         except Exception as e:
-            return self.error_response(f"Partner unlinking failed: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Partner unlinking failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class RoleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class RoleManagementAPIView(APIView):
     """API endpoint for role management"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get user roles",
+        description="Retrieve available roles and user's current role assignments",
+        responses={
+            200: EventUserSchema,
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['User Management']
+    )
     def get(self, request):
         """Get available roles and user's current roles"""
         user = request.user
@@ -209,12 +266,26 @@ class RoleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             }
         }
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Roles retrieved successfully',
+            'data': data
+        })
 
 
-class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class PermissionsAPIView(APIView):
     """API endpoint for user permissions"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get user permissions",
+        description="Retrieve user's current Auth0 permissions and subscription details",
+        responses={
+            200: EventUserSchema,
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['Permissions']
+    )
     def get(self, request):
         """Get user's current permissions"""
         user = request.user
@@ -236,29 +307,63 @@ class PermissionsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             }
         }
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Permissions retrieved successfully',
+            'data': data
+        })
     
+    @extend_schema(
+        summary="Refresh Auth0 permissions",
+        description="Sync user permissions from Auth0",
+        responses={
+            200: OpenApiResponse(description="Permissions refreshed successfully"),
+            400: OpenApiResponse(description="Refresh failed"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['Permissions']
+    )
     def post(self, request):
         """Refresh permissions from Auth0"""
         try:
             user = request.user
             user.sync_auth0_permissions()
             
-            return self.success_response(message="Permissions refreshed successfully")
+            return Response({
+                'success': True,
+                'message': 'Permissions refreshed successfully'
+            })
             
         except Exception as e:
-            return self.error_response(f"Permission refresh failed: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Permission refresh failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WeddingDataAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class WeddingDataAPIView(APIView):
     """API endpoint for wedding-specific data"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get wedding data",
+        description="Retrieve shared wedding information (bride/groom only)",
+        responses={
+            200: EventUserSchema,
+            401: OpenApiResponse(description="Authentication required"),
+            403: OpenApiResponse(description="Only bride/groom can access wedding data"),
+        },
+        tags=['User Management']
+    )
     def get(self, request):
         """Get shared wedding data"""
         user = request.user
         
         if not user.is_bride_or_groom:
-            return self.error_response("Only bride/groom can access wedding data", status=403)
+            return Response({
+                'success': False,
+                'message': 'Only bride/groom can access wedding data'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         wedding_data = user.get_shared_wedding_data()
         
@@ -277,4 +382,8 @@ class WeddingDataAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
                 'auth0_picture': partner.auth0_picture,
             }
         
-        return self.success_response(wedding_data)
+        return Response({
+            'success': True,
+            'message': 'Wedding data retrieved successfully',
+            'data': wedding_data
+        })

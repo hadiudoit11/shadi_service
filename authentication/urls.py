@@ -23,5 +23,8 @@ urlpatterns = [
     path('api/guests/', views.GuestManagementAPIView.as_view(), name='api_guests'),
     path('api/schedule/', views.ScheduleManagementAPIView.as_view(), name='api_schedule'),
     path('api/analytics/', views.AnalyticsAPIView.as_view(), name='api_analytics'),
-    path('api/vendor-relationships/', views.VendorManagementAPIView.as_view(), name='api_vendor_management'),
+    
+    # Vendor API
+    path('api/vendors/', views.VendorListAPIView.as_view(), name='api_vendors'),
+    path('api/vendors/<int:vendor_id>/', views.VendorDetailAPIView.as_view(), name='api_vendor_detail'),
 ]

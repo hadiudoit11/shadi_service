@@ -1,17 +1,9 @@
-from django.http import JsonResponse
-from django.views.generic import View
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from ..models import EventUser
-from .auth_views import Auth0LoginRequiredMixin
-from .api_views import APIResponseMixin
-from .auth0_mixins import (
-    CanCreateEventsMixin, 
-    CanManageVendorsMixin, 
-    CanManageGuestsMixin,
-    CanEditSchedulesMixin,
-    CanAccessAnalyticsMixin,
-)
 from ..auth0_permissions import (
     can_create_events,
     can_manage_vendors,
@@ -19,13 +11,23 @@ from ..auth0_permissions import (
     can_edit_schedules,
     can_access_analytics,
 )
+from datetime import date
 import json
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class EventCreationAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class EventCreationAPIView(APIView):
     """API endpoint for event creation and management"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get event creation status",
+        description="Retrieve user's event creation capabilities and limits",
+        responses={
+            200: OpenApiResponse(description="Event creation status retrieved"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['Event Management']
+    )
     def get(self, request):
         """Get user's event creation status and limits"""
         user = request.user
@@ -46,32 +48,49 @@ class EventCreationAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             }
         }
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Event creation status retrieved',
+            'data': data
+        })
     
+    @extend_schema(
+        summary="Validate event creation",
+        description="Validate event creation request and check permissions",
+        responses={
+            200: OpenApiResponse(description="Event validation passed"),
+            400: OpenApiResponse(description="Validation failed"),
+            401: OpenApiResponse(description="Authentication required"),
+            403: OpenApiResponse(description="Permission denied"),
+        },
+        tags=['Event Management']
+    )
     def post(self, request):
         """Validate event creation request"""
         try:
-            data = json.loads(request.body)
+            data = request.data
             user = request.user
             
             # Check Auth0 permissions
             if not can_create_events(user):
-                return self.error_response(
-                    "You don't have permission to create events", 
-                    status=403
-                )
+                return Response({
+                    'success': False,
+                    'message': "You don't have permission to create events"
+                }, status=status.HTTP_403_FORBIDDEN)
             
             # Validate required fields for bride/groom
             if user.is_bride_or_groom:
                 if not user.wedding_date:
-                    return self.error_response(
-                        "Wedding date is required before creating events"
-                    )
+                    return Response({
+                        'success': False,
+                        'message': "Wedding date is required before creating events"
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 
                 if not user.get_wedding_partner():
-                    return self.error_response(
-                        "Wedding partner must be linked before creating events"
-                    )
+                    return Response({
+                        'success': False,
+                        'message': "Wedding partner must be linked before creating events"
+                    }, status=status.HTTP_400_BAD_REQUEST)
             
             # This would integrate with your events app
             # For now, just return success with validation
@@ -82,20 +101,32 @@ class EventCreationAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
                 'permissions_validated': True,
             }
             
-            return self.success_response(
-                data=event_data,
-                message="Event creation validation passed"
-            )
+            return Response({
+                'success': True,
+                'message': 'Event creation validation passed',
+                'data': event_data
+            })
             
-        except json.JSONDecodeError:
-            return self.error_response("Invalid JSON data")
         except Exception as e:
-            return self.error_response(f"Validation failed: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Validation failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class VendorManagementAPIView(CanManageVendorsMixin, Auth0LoginRequiredMixin, APIResponseMixin, View):
+class VendorManagementAPIView(APIView):
     """API endpoint for vendor management - requires manage:vendors permission"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get vendor management capabilities",
+        description="Retrieve vendor management permissions and capabilities",
+        responses={
+            200: OpenApiResponse(description="Vendor management info retrieved"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['Vendor Management']
+    )
     def get(self, request):
         """Get vendor management capabilities"""
         user = request.user
@@ -115,12 +146,26 @@ class VendorManagementAPIView(CanManageVendorsMixin, Auth0LoginRequiredMixin, AP
             ]
         }
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Vendor management info retrieved',
+            'data': data
+        })
 
 
-class GuestManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class GuestManagementAPIView(APIView):
     """API endpoint for guest management"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get guest management capabilities",
+        description="Retrieve guest management permissions and settings",
+        responses={
+            200: OpenApiResponse(description="Guest management info retrieved"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['Guest Management']
+    )
     def get(self, request):
         """Get guest management capabilities"""
         user = request.user
@@ -140,12 +185,26 @@ class GuestManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
             'estimated_guest_count': user.guest_count_estimate,
         }
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Guest management info retrieved',
+            'data': data
+        })
 
 
-class ScheduleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class ScheduleManagementAPIView(APIView):
     """API endpoint for schedule/timeline management"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get schedule management capabilities",
+        description="Retrieve schedule management permissions and timeline templates",
+        responses={
+            200: OpenApiResponse(description="Schedule management info retrieved"),
+            401: OpenApiResponse(description="Authentication required"),
+        },
+        tags=['Schedule Management']
+    )
     def get(self, request):
         """Get schedule management capabilities"""
         user = request.user
@@ -166,21 +225,36 @@ class ScheduleManagementAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View)
             ]
         }
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Schedule management info retrieved',
+            'data': data
+        })
 
 
-class AnalyticsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
+class AnalyticsAPIView(APIView):
     """API endpoint for wedding analytics and insights"""
+    permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get wedding analytics",
+        description="Retrieve wedding analytics and insights (premium feature)",
+        responses={
+            200: OpenApiResponse(description="Analytics retrieved successfully"),
+            401: OpenApiResponse(description="Authentication required"),
+            403: OpenApiResponse(description="Analytics access denied"),
+        },
+        tags=['Analytics']
+    )
     def get(self, request):
         """Get analytics capabilities and basic stats"""
         user = request.user
         
         if not user.can_access_analytics:
-            return self.error_response(
-                "You don't have permission to access analytics", 
-                status=403
-            )
+            return Response({
+                'success': False,
+                'message': "You don't have permission to access analytics"
+            }, status=status.HTTP_403_FORBIDDEN)
         
         # Mock analytics data - replace with real data from your events app
         partner = user.get_wedding_partner()
@@ -210,8 +284,11 @@ class AnalyticsAPIView(Auth0LoginRequiredMixin, APIResponseMixin, View):
         
         # Calculate days until wedding
         if user.wedding_date:
-            from datetime import date
             days_until = (user.wedding_date - date.today()).days
             data['wedding_overview']['days_until_wedding'] = max(0, days_until)
         
-        return self.success_response(data)
+        return Response({
+            'success': True,
+            'message': 'Analytics retrieved successfully',
+            'data': data
+        })
