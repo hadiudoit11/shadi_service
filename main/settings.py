@@ -101,8 +101,9 @@ DATABASES = {
     )
 }
 
-# Fix SSL connection for production PostgreSQL (Render)
-if not DEBUG and os.getenv('DATABASE_URL'):
+# Fix SSL connection for production PostgreSQL (Render only)
+# Only apply SSL for production Render database (contains render.com in URL)
+if not DEBUG and os.getenv('DATABASE_URL') and 'render.com' in os.getenv('DATABASE_URL', ''):
     DATABASES['default']['OPTIONS'] = {
         'sslmode': 'require',
     }
