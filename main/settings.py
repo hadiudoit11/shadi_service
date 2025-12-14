@@ -25,10 +25,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_kz(%0(ge2t7s2rcbfl9zan_hd*tzni)(e=@pzw+@1=u2t*j54'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-_kz(%0(ge2t7s2rcbfl9zan_hd*tzni)(e=@pzw+@1=u2t*j54')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [
     'shadi-service.onrender.com',
@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve static files in production
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -70,7 +71,7 @@ ROOT_URLCONF = 'main.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -99,6 +100,12 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+
+# Fix SSL connection for production PostgreSQL (Render)
+if not DEBUG and os.getenv('DATABASE_URL'):
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
 
 
 # Password validation
@@ -135,8 +142,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# WhiteNoise configuration for production static file serving
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (uploads)
 MEDIA_URL = '/media/'
@@ -189,7 +199,7 @@ LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/auth/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
-# Auth0 specific settings
+# Auth0 OAuth Configuration
 AUTH0_SCOPE = 'openid profile email'
 AUTH0_AUDIENCE = ''  # Add if you have an API audience
 
@@ -242,6 +252,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",     # Alternative localhost
     "http://localhost:3001",      # Alternative frontend port
     "http://127.0.0.1:3001",     # Alternative frontend port
+    "https://shadi-frontend.vercel.app",  # Production frontend (update with actual domain)
+    "https://shadi-service.netlify.app",  # Alternative production domain
 ]
 
 # Allow credentials (cookies, authorization headers)
@@ -263,3 +275,20 @@ CORS_ALLOW_HEADERS = [
 # Development setting - be more permissive in development
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
+
+# Production Security Settings
+if not DEBUG:
+    # Security headers for production
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # Force HTTPS in production
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    
+    # Set proper referrer policy
+    SECURE_REFERRER_POLICY = 'same-origin'

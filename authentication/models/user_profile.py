@@ -132,7 +132,7 @@ class EventUser(AbstractUser):
     
     def sync_auth0_permissions(self):
         """Sync user permissions from Auth0 - replaces hard-coded permission logic"""
-        from ..auth0_permissions import Auth0UserSync
+        from ..services.auth0_permissions import Auth0UserSync
         
         sync_service = Auth0UserSync()
         return sync_service.sync_user_permissions(self)

@@ -28,6 +28,8 @@ urlpatterns = [
     path('api/vendors/', views.VendorListAPIView.as_view(), name='api_vendors'),
     path('api/vendors/<int:vendor_id>/', views.VendorDetailAPIView.as_view(), name='api_vendor_detail'),
     path('api/vendors/<int:vendor_id>/images/', views.VendorImagesAPIView.as_view(), name='api_vendor_images'),
+    path('api/vendors/categories/', views.VendorCategoriesAPIView.as_view(), name='api_vendor_categories'),
+    path('api/vendors/categories/<slug:category_slug>/', views.VendorCategoryDetailAPIView.as_view(), name='api_vendor_category_detail'),
     path('api/image-types/', views.VendorImageTypesAPIView.as_view(), name='api_image_types'),
     
     # Image Upload API

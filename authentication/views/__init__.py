@@ -33,6 +33,11 @@ from .vendor_image_views import (
     VendorImageTypesAPIView,
 )
 
+from .vendor_category_views import (
+    VendorCategoriesAPIView,
+    VendorCategoryDetailAPIView,
+)
+
 from .image_upload import (
     ImageUploadAPIView,
 )
@@ -65,6 +70,8 @@ __all__ = [
     'VendorDetailAPIView',
     'VendorImagesAPIView',
     'VendorImageTypesAPIView',
+    'VendorCategoriesAPIView',
+    'VendorCategoryDetailAPIView',
     
     # Image Upload
     'ImageUploadAPIView',

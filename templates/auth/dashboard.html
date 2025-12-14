@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - Shadi Service</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .header { border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; }
+        .nav { margin-bottom: 20px; }
+        .nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
+        .nav a:hover { text-decoration: underline; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 5px; border-left: 4px solid #007bff; }
+        .card h3 { margin-top: 0; color: #007bff; }
+        .api-section { background: #e8f5e8; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .api-link { display: inline-block; margin: 5px 10px 5px 0; padding: 8px 12px; background: #007bff; color: white; text-decoration: none; border-radius: 3px; font-size: 14px; }
+        .api-link:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/auth/dashboard/">Dashboard</a>
+        <a href="/auth/profile/">Profile</a>
+        <a href="/auth/logout/">Logout</a>
+    </div>
+
+    <div class="header">
+        <h1>Dashboard</h1>
+        <p>Welcome back, {{ event_user.display_name }}!</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <h3>Your Account</h3>
+            <p><strong>Email:</strong> {{ event_user.email }}</p>
+            <p><strong>Member Since:</strong> {{ event_user.created_at|date:"F d, Y" }}</p>
+            <p><strong>Auth0 Status:</strong> 
+                {% if event_user.auth0_user_id %}
+                    <span style="color: green;">✓ Connected</span>
+                {% else %}
+                    <span style="color: red;">✗ Not Connected</span>
+                {% endif %}
+            </p>
+        </div>
+
+        {% if event_user.is_vendor_representative %}
+        <div class="card">
+            <h3>Your Vendors</h3>
+            <p>You manage {{ event_user.represented_vendors.count }} vendor(s)</p>
+            {% for vendor in event_user.represented_vendors|slice:":3" %}
+                <p>• {{ vendor.business_name }}</p>
+            {% empty %}
+                <p><em>No vendors assigned</em></p>
+            {% endfor %}
+            {% if event_user.represented_vendors.count > 3 %}
+                <p><em>... and {{ event_user.represented_vendors.count|add:"-3" }} more</em></p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h3>Permissions</h3>
+            <p><strong>Roles:</strong></p>
+            {% for role in event_user.auth0_roles %}
+                <span style="background: #e3f2fd; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin: 2px;">{{ role }}</span>
+            {% empty %}
+                <em>No roles assigned</em>
+            {% endfor %}
+            
+            {% if event_user.needs_permission_sync %}
+                <p style="color: orange; font-size: 12px; margin-top: 10px;">
+                    ⚠️ Permissions may need sync from Auth0
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>Quick Actions</h3>
+            <p><a href="/auth/profile/">View Full Profile</a></p>
+            <p><a href="/admin/">Django Admin</a> (if staff)</p>
+            {% if event_user.is_vendor_representative %}
+                <p><a href="/admin/authentication/vendor/">Manage Vendors</a></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="api-section">
+        <h3>API Endpoints</h3>
+        <p>Available API endpoints for development and testing:</p>
+        
+        <div style="margin: 10px 0;">
+            <strong>Vendor APIs:</strong><br>
+            <a href="/auth/api/vendors/" class="api-link" target="_blank">List Vendors</a>
+            <a href="/auth/api/image-types/" class="api-link" target="_blank">Image Types</a>
+        </div>
+        
+        <div style="margin: 10px 0;">
+            <strong>User APIs:</strong><br>
+            <a href="/auth/api/profile/" class="api-link" target="_blank">My Profile</a>
+            <a href="/auth/api/roles/" class="api-link" target="_blank">My Roles</a>
+        </div>
+        
+        <div style="margin: 10px 0;">
+            <strong>Documentation:</strong><br>
+            <a href="/api/schema/swagger-ui/" class="api-link" target="_blank">API Docs (Swagger)</a>
+            <a href="/api/schema/redoc/" class="api-link" target="_blank">API Docs (ReDoc)</a>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
+        <p><strong>Auth0 Integration Status:</strong> ✅ Ready to use</p>
+        <p>Last login: {{ event_user.last_login|date:"M d, Y g:i A"|default:"First login" }}</p>
+    </div>
+</body>
+</html>

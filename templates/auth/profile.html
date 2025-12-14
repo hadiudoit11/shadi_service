@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Profile - Shadi Service</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .header { border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; }
+        .profile-info { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .auth0-info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .nav { margin-bottom: 20px; }
+        .nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
+        .nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/auth/dashboard/">Dashboard</a>
+        <a href="/auth/profile/">Profile</a>
+        <a href="/auth/logout/">Logout</a>
+    </div>
+
+    <div class="header">
+        <h1>My Profile</h1>
+        <p>Welcome, {{ event_user.display_name }}!</p>
+    </div>
+
+    <div class="profile-info">
+        <h3>User Information</h3>
+        <p><strong>Name:</strong> {{ event_user.get_full_name|default:"Not provided" }}</p>
+        <p><strong>Email:</strong> {{ event_user.email }}</p>
+        <p><strong>Username:</strong> {{ event_user.username }}</p>
+        <p><strong>Member Since:</strong> {{ event_user.created_at|date:"F d, Y" }}</p>
+    </div>
+
+    <div class="auth0-info">
+        <h3>Auth0 Information</h3>
+        <p><strong>Auth0 User ID:</strong> {{ event_user.auth0_user_id|default:"Not connected" }}</p>
+        <p><strong>Auth0 Nickname:</strong> {{ event_user.auth0_nickname|default:"Not set" }}</p>
+        {% if event_user.auth0_picture %}
+            <p><strong>Profile Picture:</strong></p>
+            <img src="{{ event_user.auth0_picture }}" alt="Profile Picture" style="width: 64px; height: 64px; border-radius: 50%;">
+        {% endif %}
+        <p><strong>Roles:</strong> {{ event_user.auth0_roles|join:", "|default:"No roles assigned" }}</p>
+        <p><strong>Last Sync:</strong> {{ event_user.last_auth0_sync|date:"M d, Y g:i A"|default:"Never synced" }}</p>
+    </div>
+
+    {% if event_user.is_vendor_representative %}
+    <div class="profile-info">
+        <h3>Vendor Information</h3>
+        <p>You represent {{ event_user.represented_vendors.count }} vendor(s):</p>
+        <ul>
+        {% for vendor in event_user.represented_vendors %}
+            <li>{{ vendor.business_name }} ({{ vendor.category }})</li>
+        {% empty %}
+            <li>No active vendor associations</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+        <p><em>This profile is managed through Auth0. Some information may be automatically synced from your Auth0 account.</em></p>
+    </div>
+</body>
+</html>

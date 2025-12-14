@@ -1,0 +1,609 @@
+openapi: 3.0.3
+info:
+  title: Shadi Service API
+  description: |
+    # Wedding Events Management API with Auth0 Integration
+
+    ## Authentication & Authorization
+    
+    This API uses Auth0 for authentication and role-based access control (RBAC).
+    
+    ### Auth0 Configuration Required:
+    - **Domain**: carrot-erp.us.auth0.com
+    - **Client ID**: B5hRQPCYBOtV7lN3jUIVg2b3PDkjy2hD
+    - **Scopes**: `openid profile email`
+    - **Callback URL**: `http://localhost:8000/auth/callback/`
+    - **Logout URL**: `http://localhost:8000/`
+
+    ### Authentication Flow:
+    1. **Login**: Redirect users to `/auth/login/` for Auth0 authentication
+    2. **Callback**: Auth0 redirects to `/auth/callback/` after successful login
+    3. **Session**: User session is maintained with Django + Auth0 JWT tokens
+    4. **Logout**: Use `/auth/logout/` to clear session and Auth0 state
+
+    ## Frontend Integration
+
+    ### 1. User Authentication
+    ```javascript
+    // Redirect to Auth0 login
+    window.location.href = 'http://localhost:8000/auth/login/';
+
+    // Check authentication status
+    fetch('/auth/api/profile/', {
+      credentials: 'include'
+    }).then(response => {
+      if (response.status === 401) {
+        // User not authenticated, redirect to login
+        window.location.href = '/auth/login/';
+      }
+      return response.json();
+    });
+
+    // Logout
+    window.location.href = '/auth/logout/';
+    ```
+
+    ### 2. Vendor Marketplace Integration
+    ```javascript
+    // Fetch all vendors for marketplace
+    fetch('/auth/api/vendors/')
+      .then(response => response.json())
+      .then(data => {
+        const vendors = data.results;
+        // Render vendor cards
+      });
+
+    // Search vendors by category and location
+    fetch('/auth/api/vendors/?category=photographer&city=Toronto&max_price=2000')
+      .then(response => response.json())
+      .then(data => {
+        // Display filtered results
+      });
+
+    // Get vendor details with images
+    fetch('/auth/api/vendors/123/')
+      .then(response => response.json())
+      .then(vendor => {
+        // Get vendor images organized by context
+        return fetch(`/auth/api/vendors/${vendor.id}/images/`);
+      })
+      .then(response => response.json())
+      .then(imageData => {
+        const { ui_images } = imageData.data;
+        
+        // Use context-specific images:
+        // ui_images.marketplace_thumbnail - for marketplace grid
+        // ui_images.storefront_hero - for vendor page header
+        // ui_images.portfolio_featured - for showcasing work
+        // ui_images.logo - for vendor branding
+      });
+    ```
+
+    ### 3. Image Management
+    ```javascript
+    // Upload images for vendors (authenticated vendors only)
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+    formData.append('vendor_id', vendorId);
+    formData.append('image_type', 'portfolio_featured');
+    formData.append('title', 'Wedding Setup');
+
+    fetch('/auth/api/upload-image/', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    }).then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          console.log('Image uploaded:', result.data.image_url);
+        }
+      });
+
+    // Get available image types for classification
+    fetch('/auth/api/image-types/')
+      .then(response => response.json())
+      .then(data => {
+        const imageTypes = data.data.image_types;
+        const displayLocations = data.data.display_locations;
+        // Populate dropdown menus
+      });
+    ```
+
+    ### 4. Error Handling
+    ```javascript
+    // Standard error handling for all API calls
+    async function apiCall(url, options = {}) {
+      try {
+        const response = await fetch(url, {
+          credentials: 'include',
+          ...options
+        });
+
+        if (response.status === 401) {
+          // Redirect to login
+          window.location.href = '/auth/login/';
+          return;
+        }
+
+        if (response.status === 403) {
+          // Permission denied
+          throw new Error('Permission denied');
+        }
+
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.message || 'API call failed');
+        }
+
+        return data;
+      } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
+    }
+    ```
+
+    ### 5. CORS Configuration
+    The API is configured to allow requests from `http://localhost:3000` for development.
+    For production, update CORS_ALLOWED_ORIGINS in Django settings.
+
+    ### 6. User Roles & Permissions
+    ```javascript
+    // Check user permissions before showing UI elements
+    fetch('/auth/api/profile/')
+      .then(response => response.json())
+      .then(user => {
+        if (user.is_vendor_representative) {
+          // Show vendor management features
+        }
+        
+        // Check specific permissions
+        const canManageVendors = user.auth0_permissions.includes('update:own_vendor');
+        const canCreateEvents = user.auth0_permissions.includes('create:events');
+      });
+    ```
+
+    ## API Response Format
+
+    All API responses follow this structure:
+    ```json
+    {
+      "success": true,
+      "message": "Operation successful",
+      "data": { /* actual response data */ },
+      "meta": { /* pagination, counts, etc */ }
+    }
+    ```
+
+    ## Image Organization System
+
+    Images are classified by type and display location:
+
+    ### Image Types:
+    - **Business Identity**: `logo`, `logo_dark`, `logo_light`
+    - **Profile**: `profile_primary`, `profile_team`, `profile_owner`
+    - **Marketplace**: `storefront_thumbnail`, `storefront_hero`, `storefront_featured`
+    - **Portfolio**: `portfolio`, `portfolio_featured`, `portfolio_before`, `portfolio_after`
+    - **Venue**: `venue_exterior`, `venue_interior`, `venue_ceremony`, `venue_reception`
+
+    ### Display Locations:
+    - **Marketplace**: `marketplace_grid`, `marketplace_list`, `search_result`
+    - **Storefront**: `storefront_header`, `storefront_gallery`, `storefront_about`
+    - **Mobile**: `mobile_card`, `mobile_story`
+    - **Social**: `social_share`, `social_cover`
+
+    ### Usage Examples:
+    ```javascript
+    // Marketplace vendor card
+    <img src={vendor.ui_images.marketplace_thumbnail} />
+
+    // Vendor storefront header
+    <img src={vendor.ui_images.storefront_hero} />
+
+    // Portfolio gallery
+    vendor.ui_images.portfolio_featured.map(img => 
+      <img src={img} key={img} />
+    );
+
+    // Before/after comparisons
+    vendor.ui_images.before_after.map(pair => 
+      <div key={pair.before}>
+        <img src={pair.before} />
+        <img src={pair.after} />
+      </div>
+    );
+    ```
+
+  version: 1.0.0
+  contact:
+    name: Shadi Service API
+    email: support@shadiservice.com
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.shadiservice.com
+    description: Production server
+
+components:
+  securitySchemes:
+    Auth0Session:
+      type: apiKey
+      in: cookie
+      name: sessionid
+      description: Django session cookie with Auth0 authentication
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+        meta:
+          type: object
+
+    Vendor:
+      type: object
+      properties:
+        id:
+          type: integer
+        business_name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        min_price:
+          type: number
+        max_price:
+          type: number
+        website_url:
+          type: string
+        contact_email:
+          type: string
+        phone_number:
+          type: string
+        is_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    VendorImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        description:
+          type: string
+        image_type:
+          type: string
+          enum: [logo, profile_primary, storefront_thumbnail, portfolio_featured, venue_exterior]
+        display_locations:
+          type: array
+          items:
+            type: string
+        is_primary:
+          type: boolean
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        display_name:
+          type: string
+        auth0_user_id:
+          type: string
+        auth0_roles:
+          type: array
+          items:
+            type: string
+        auth0_permissions:
+          type: array
+          items:
+            type: string
+        is_vendor_representative:
+          type: boolean
+
+security:
+  - Auth0Session: []
+
+paths:
+  /auth/login/:
+    get:
+      summary: Redirect to Auth0 login
+      description: Redirects user to Auth0 authentication page
+      security: []
+      responses:
+        '302':
+          description: Redirect to Auth0
+
+  /auth/logout/:
+    get:
+      summary: Logout and clear session
+      description: Clears Django session and redirects to Auth0 logout
+      responses:
+        '302':
+          description: Redirect to Auth0 logout
+
+  /auth/api/vendors/:
+    get:
+      summary: List all vendors
+      description: Get paginated list of verified vendors with optional filtering
+      security: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by vendor category
+        - name: city
+          in: query
+          schema:
+            type: string
+          description: Filter by city
+        - name: max_price
+          in: query
+          schema:
+            type: number
+          description: Filter by maximum price
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number for pagination
+      responses:
+        '200':
+          description: Vendors retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          results:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Vendor'
+                          count:
+                            type: integer
+                          next:
+                            type: string
+                            nullable: true
+                          previous:
+                            type: string
+                            nullable: true
+
+  /auth/api/vendors/{vendor_id}/:
+    get:
+      summary: Get vendor details
+      description: Get detailed information about a specific vendor
+      security: []
+      parameters:
+        - name: vendor_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vendor details retrieved successfully
+        '404':
+          description: Vendor not found
+
+  /auth/api/vendors/{vendor_id}/images/:
+    get:
+      summary: Get vendor images
+      description: Get all images for a vendor organized by type and display context
+      security: []
+      parameters:
+        - name: vendor_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: Filter by image type
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Filter by display location
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          vendor_id:
+                            type: integer
+                          vendor_name:
+                            type: string
+                          ui_images:
+                            type: object
+                            properties:
+                              logo:
+                                type: string
+                                format: uri
+                                nullable: true
+                              marketplace_thumbnail:
+                                type: string
+                                format: uri
+                                nullable: true
+                              storefront_hero:
+                                type: string
+                                format: uri
+                                nullable: true
+                              portfolio_featured:
+                                type: array
+                                items:
+                                  type: string
+                                  format: uri
+                              before_after:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    before:
+                                      type: string
+                                      format: uri
+                                    after:
+                                      type: string
+                                      format: uri
+                          images_by_type:
+                            type: object
+                          total_images:
+                            type: integer
+        '404':
+          description: Vendor not found
+
+  /auth/api/image-types/:
+    get:
+      summary: Get image types and locations
+      description: Get all available image types and display locations for reference
+      security: []
+      responses:
+        '200':
+          description: Types retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          image_types:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                value:
+                                  type: string
+                                label:
+                                  type: string
+                          display_locations:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                value:
+                                  type: string
+                                label:
+                                  type: string
+                          usage_guide:
+                            type: object
+                          recommended_sizes:
+                            type: object
+
+  /auth/api/upload-image/:
+    post:
+      summary: Upload vendor image
+      description: Upload an image for a vendor with classification
+      security:
+        - Auth0Session: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                vendor_id:
+                  type: integer
+                image_type:
+                  type: string
+                title:
+                  type: string
+                description:
+                  type: string
+                display_locations:
+                  type: array
+                  items:
+                    type: string
+              required:
+                - image
+                - vendor_id
+                - image_type
+      responses:
+        '201':
+          description: Image uploaded successfully
+        '400':
+          description: Invalid request or file
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+
+  /auth/api/profile/:
+    get:
+      summary: Get user profile
+      description: Get current user's profile and Auth0 information
+      security:
+        - Auth0Session: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Authentication required
+
+  /auth/api/roles/:
+    get:
+      summary: Get user roles
+      description: Get current user's Auth0 roles and permissions
+      security:
+        - Auth0Session: []
+      responses:
+        '200':
+          description: Roles retrieved successfully
+        '401':
+          description: Authentication required
