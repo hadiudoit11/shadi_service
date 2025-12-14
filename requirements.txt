@@ -23,3 +23,5 @@ whitenoise>=6.5.0
 
 # Static Files and Media
 Pillow>=10.0.0
+boto3>=1.28.0
+django-storages>=1.14.0

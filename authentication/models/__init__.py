@@ -4,6 +4,7 @@ from .vendor_category import VendorCategory
 from .vendor_user import VendorUser
 from .vendor_availability import VendorAvailability
 from .vendor_inquiry import VendorInquiry
+from .vendor_images import VendorImage
 from .services import Service, Package, PackageService, ServiceAvailability
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     'VendorUser',
     'VendorAvailability',
     'VendorInquiry',
+    'VendorImage',
     'Service',
     'Package',
     'PackageService',

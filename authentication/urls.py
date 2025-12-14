@@ -27,4 +27,9 @@ urlpatterns = [
     # Vendor API
     path('api/vendors/', views.VendorListAPIView.as_view(), name='api_vendors'),
     path('api/vendors/<int:vendor_id>/', views.VendorDetailAPIView.as_view(), name='api_vendor_detail'),
+    path('api/vendors/<int:vendor_id>/images/', views.VendorImagesAPIView.as_view(), name='api_vendor_images'),
+    path('api/image-types/', views.VendorImageTypesAPIView.as_view(), name='api_image_types'),
+    
+    # Image Upload API
+    path('api/upload-image/', views.ImageUploadAPIView.as_view(), name='api_upload_image'),
 ]

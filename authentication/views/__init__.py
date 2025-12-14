@@ -28,6 +28,15 @@ from .vendor_views import (
     VendorDetailAPIView,
 )
 
+from .vendor_image_views import (
+    VendorImagesAPIView,
+    VendorImageTypesAPIView,
+)
+
+from .image_upload import (
+    ImageUploadAPIView,
+)
+
 __all__ = [
     # Auth Views
     'LoginView',
@@ -54,4 +63,9 @@ __all__ = [
     # Vendor Views
     'VendorListAPIView',
     'VendorDetailAPIView',
+    'VendorImagesAPIView',
+    'VendorImageTypesAPIView',
+    
+    # Image Upload
+    'ImageUploadAPIView',
 ]

@@ -1,0 +1,27 @@
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "HEAD"
+        ],
+        "AllowedOrigins": [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+            "https://shadi-s3-bucket-sh.s3.amazonaws.com",
+            "https://your-production-domain.com"
+        ],
+        "ExposeHeaders": [
+            "ETag",
+            "x-amz-meta-custom-header"
+        ],
+        "MaxAgeSeconds": 3000
+    }
+]

@@ -47,9 +47,6 @@ class Command(BaseCommand):
         errors = 0
 
         with open(csv_file, 'r', encoding='utf-8') as file:
-            # Skip empty first line
-            file.readline()
-            
             reader = csv.DictReader(file)
             
             for row_num, row in enumerate(reader, start=2):
@@ -83,8 +80,8 @@ class Command(BaseCommand):
                     amenities = row['amenities'].strip('"')
                     
                     # Handle boolean fields
-                    is_active = row['is_active'].strip('"').upper() == 'TRUE'
-                    is_featured = row['is_featured'].strip('"').upper() == 'TRUE'
+                    is_active = row.get('is_active', 'TRUE').strip('"').upper() == 'TRUE'
+                    is_featured = row.get('is_featured', 'FALSE').strip('"').upper() == 'TRUE'
                     
                     # Get or create vendor category
                     vendor_category, cat_created = VendorCategory.objects.get_or_create(
@@ -102,12 +99,12 @@ class Command(BaseCommand):
                     # Parse amenities into services list
                     services_list = [s.strip() for s in amenities.split(',') if s.strip()] if amenities else []
                     
-                    # Check if vendor exists (by business_email)
+                    # Check if vendor exists (by business_name since many don't have emails)
                     vendor, created = Vendor.objects.get_or_create(
-                        business_email=email,
+                        business_name=name,
                         defaults={
                             'admin': admin_user,
-                            'business_name': name,
+                            'business_email': email if email else f"{name.lower().replace(' ', '_')}@example.com",
                             'business_phone': phone,
                             'website': website,
                             'category': vendor_category,
