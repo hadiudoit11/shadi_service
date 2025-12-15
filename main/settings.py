@@ -33,9 +33,30 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = [
     'shadi-service.onrender.com',
     'localhost',
+    '127.0.0.1',
     '0.0.0.0',
-    '192.168.1.220'
+    '192.168.1.220',
+    '.onrender.com',  # Allow all Render subdomains
 ]
+
+# CSRF Configuration
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://shadi-service.onrender.com',
+]
+
+# CSRF settings
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token if needed
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False  # Use cookies instead of sessions for CSRF
+
+# Session configuration
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 
 # Application definition
@@ -196,10 +217,9 @@ AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
 AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
 AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
 
-# Session configuration for Auth0
-SESSION_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_AGE = 60 * 60 * 24  # 24 hours
+# Auth0 OAuth Configuration
+AUTH0_SCOPE = 'openid profile email'
+AUTH0_AUDIENCE = ''  # Add if you have an API audience
 
 # Login redirect URLs
 LOGIN_URL = '/auth/login/'
@@ -294,8 +314,6 @@ if not DEBUG:
     
     # Force HTTPS in production
     SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
     
     # Set proper referrer policy
     SECURE_REFERRER_POLICY = 'same-origin'
