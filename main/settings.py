@@ -184,6 +184,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom User Model
 AUTH_USER_MODEL = 'authentication.EventUser'
 
+# Custom Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'authentication.backends.EmailOrUsernameBackend',  # Allow email login
+    'django.contrib.auth.backends.ModelBackend',       # Keep default as fallback
+]
+
 # Auth0 Configuration (following Auth0 Django quickstart)
 
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
