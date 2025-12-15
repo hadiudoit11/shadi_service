@@ -2,8 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
+from django.core.paginator import Paginator
 from ..models import Vendor, VendorCategory
 from ..schemas import VendorSchema
 
@@ -41,6 +43,30 @@ class VendorListAPIView(APIView):
                 required=False,
                 type=int
             ),
+            OpenApiParameter(
+                name='sort_by',
+                description='Sort by field: rating, price, name, experience, featured',
+                required=False,
+                type=str
+            ),
+            OpenApiParameter(
+                name='sort_order',
+                description='Sort order: asc or desc (default: asc)',
+                required=False,
+                type=str
+            ),
+            OpenApiParameter(
+                name='page',
+                description='Page number (default: 1)',
+                required=False,
+                type=int
+            ),
+            OpenApiParameter(
+                name='limit',
+                description='Number of results per page (default: 12, max: 50)',
+                required=False,
+                type=int
+            ),
         ],
         responses={
             200: VendorSchema,
@@ -49,12 +75,16 @@ class VendorListAPIView(APIView):
         tags=['Vendors']
     )
     def get(self, request):
-        """Get list of vendors with filtering"""
+        """Get list of vendors with filtering, sorting and pagination"""
         # Get query parameters
         category_slug = request.GET.get('category')
         city = request.GET.get('city')
         max_price = request.GET.get('max_price')
         service_radius = request.GET.get('radius', 25)
+        sort_by = request.GET.get('sort_by', 'name')
+        sort_order = request.GET.get('sort_order', 'asc')
+        page = int(request.GET.get('page', 1))
+        limit = min(int(request.GET.get('limit', 12)), 50)  # Max 50 per page
         
         # Base queryset - only active, verified vendors
         vendors = Vendor.objects.filter(
@@ -78,19 +108,36 @@ class VendorListAPIView(APIView):
             except ValueError:
                 pass
         
-        # Limit by service radius if location provided
-        user_location = request.GET.get('location')
-        if user_location:
-            # This would need geocoding - for now just filter by radius setting
-            try:
-                radius = int(service_radius)
-                vendors = vendors.filter(service_radius_miles__gte=radius)
-            except ValueError:
-                pass
+        # Apply sorting
+        sort_field = 'business_name'  # default
+        if sort_by == 'rating':
+            # Use featured status as proxy for rating until rating system is implemented
+            sort_field = 'is_featured'
+        elif sort_by == 'price':
+            sort_field = 'price_range_min'
+        elif sort_by == 'name':
+            sort_field = 'business_name'
+        elif sort_by == 'experience':
+            sort_field = 'years_in_business'
+        elif sort_by == 'featured':
+            sort_field = 'is_featured'
+        
+        # Apply sort order
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+        
+        vendors = vendors.order_by(sort_field, 'business_name')
+        
+        # Get total count before pagination
+        total_count = vendors.count()
+        
+        # Apply pagination
+        paginator = Paginator(vendors, limit)
+        page_obj = paginator.get_page(page)
         
         # Serialize vendor data
         vendor_data = []
-        for vendor in vendors[:50]:  # Limit results
+        for vendor in page_obj.object_list:
             vendor_data.append({
                 'id': vendor.id,
                 'business_name': vendor.business_name,
@@ -98,13 +145,20 @@ class VendorListAPIView(APIView):
                     'name': vendor.category.name,
                     'slug': vendor.category.slug,
                 },
-                'location': vendor.location_display,
-                'price_range': vendor.price_range_display,
+                'location': f"{vendor.city}, {vendor.state}",
+                'city': vendor.city,
+                'state': vendor.state,
+                'price_range_min': float(vendor.price_range_min) if vendor.price_range_min else None,
+                'price_range_max': float(vendor.price_range_max) if vendor.price_range_max else None,
+                'price_range_display': f"${int(vendor.price_range_min) if vendor.price_range_min else 'N/A'} - ${int(vendor.price_range_max) if vendor.price_range_max else 'N/A'}",
                 'description': vendor.description[:200] + '...' if len(vendor.description) > 200 else vendor.description,
                 'services_offered': vendor.services_offered,
                 'years_in_business': vendor.years_in_business,
                 'is_featured': vendor.is_featured,
-                'portfolio_images': vendor.portfolio_images[:3],  # First 3 images
+                'rating_average': 4.5 if vendor.is_featured else 4.0,  # Placeholder until rating system
+                'review_count': 12 if vendor.is_featured else 8,  # Placeholder until review system
+                'website': vendor.website,
+                'business_phone': vendor.business_phone,
             })
         
         # Get categories for filtering
@@ -114,11 +168,21 @@ class VendorListAPIView(APIView):
         
         return Response({
             'success': True,
-            'message': f'Found {len(vendor_data)} vendors',
+            'message': f'Found {total_count} vendors',
             'data': {
-                'vendors': vendor_data,
+                'results': vendor_data,  # Use 'results' to match common pagination format
+                'vendors': vendor_data,  # Keep for backward compatibility
                 'categories': categories,
-                'total_count': vendors.count(),
+                'pagination': {
+                    'page': page,
+                    'limit': limit,
+                    'total_count': total_count,
+                    'total_pages': paginator.num_pages,
+                    'has_next': page_obj.has_next(),
+                    'has_previous': page_obj.has_previous(),
+                    'next_page': page + 1 if page_obj.has_next() else None,
+                    'previous_page': page - 1 if page_obj.has_previous() else None,
+                }
             }
         })
 

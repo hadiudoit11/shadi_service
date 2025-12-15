@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-_kz(%0(ge2t7s2rcbfl9zan_hd*tzni)(e=@pzw+@1=u2t*j54')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'True').lower() in ['true', '1', 'on', 'yes']
 
 ALLOWED_HOSTS = [
     'shadi-service.onrender.com',
