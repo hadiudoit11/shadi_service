@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import protected_views
 
 app_name = 'auth'
 
@@ -34,4 +35,13 @@ urlpatterns = [
     
     # Image Upload API
     path('api/upload-image/', views.ImageUploadAPIView.as_view(), name='api_upload_image'),
+    
+    # Protected API endpoints (Auth0 role/permission examples)
+    path('api/protected/vendors/', protected_views.protected_vendors_list, name='api_protected_vendors'),
+    path('api/protected/create-vendor/', protected_views.create_vendor, name='api_create_vendor'),
+    path('api/protected/update-vendor/<int:vendor_id>/', protected_views.update_vendor, name='api_update_vendor'),
+    path('api/protected/vendor-management/', protected_views.VendorManagementAPIView.as_view(), name='api_vendor_management'),
+    path('api/protected/admin/', protected_views.AdminOnlyAPIView.as_view(), name='api_admin_only'),
+    path('api/protected/wedding-planning/', protected_views.WeddingPlannerAPIView.as_view(), name='api_wedding_planning'),
+    path('api/debug/permissions/', protected_views.UserPermissionsAPIView.as_view(), name='api_debug_permissions'),
 ]

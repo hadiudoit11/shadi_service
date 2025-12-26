@@ -219,12 +219,15 @@ AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
 
 # Auth0 OAuth Configuration
 AUTH0_SCOPE = 'openid profile email'
-AUTH0_AUDIENCE = ''  # Add if you have an API audience
+AUTH0_AUDIENCE = os.getenv('AUTH0_AUDIENCE', '')  # Your API identifier
 
-# Login redirect URLs
+# Frontend URLs for redirects
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
+# Login redirect URLs - redirect to frontend after auth
 LOGIN_URL = '/auth/login/'
-LOGIN_REDIRECT_URL = '/auth/dashboard/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = f'{FRONTEND_URL}/profile'  # Redirect to frontend profile
+LOGOUT_REDIRECT_URL = f'{FRONTEND_URL}/'  # Redirect to frontend home
 
 # Auth0 OAuth Configuration
 AUTH0_SCOPE = 'openid profile email'

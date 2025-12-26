@@ -103,8 +103,8 @@ class CallbackView(View):
             # Create or get user following Auth0 best practices
             user, created = EventUser.objects.get_or_create_from_auth0(user_info)
             
-            # Log user in
-            login(request, user)
+            # Log user in with specific backend
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             
             # Store Auth0 session info for future reference
             request.session['auth0_user_id'] = user_info.get('sub')
@@ -118,12 +118,15 @@ class CallbackView(View):
                 messages.success(request, f'Welcome back {user.display_name}!')
                 logger.info(f"User logged in via Auth0: {user.email}")
             
-            # Redirect to next URL or default
+            # Redirect to frontend with auth token/session info
             next_url = request.session.get('next_url', settings.LOGIN_REDIRECT_URL)
             if 'next_url' in request.session:
                 del request.session['next_url']
             
-            return redirect(next_url)
+            # Add success parameter to let frontend know auth was successful
+            redirect_url = f"{next_url}?auth=success&user_id={user.id}"
+            
+            return redirect(redirect_url)
             
         except Exception as e:
             logger.error(f"Auth0 callback error: {str(e)}", exc_info=True)

@@ -17,7 +17,7 @@ class EventUserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('event_role', EventUser.ADMIN)
+        # Remove reference to EventUser.ADMIN to avoid circular import
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
@@ -34,7 +34,7 @@ class EventUserManager(BaseUserManager):
             user = self.get(auth0_user_id=auth0_user_id)
             user.update_from_auth0(auth0_user_data)
             return user, False
-        except EventUser.DoesNotExist:
+        except self.model.DoesNotExist:
             user = self.create_user(
                 email=email,
                 username=email,

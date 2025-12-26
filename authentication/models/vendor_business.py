@@ -9,20 +9,20 @@ class Vendor(models.Model):
     """Wedding vendors/service providers - separate from users"""
     
     # Business Information
-    business_name = models.CharField(max_length=200)
-    business_email = models.EmailField()
+    business_name = models.CharField(max_length=200, blank=True)
+    business_email = models.EmailField(blank=True)
     business_phone = models.CharField(max_length=20, blank=True)
     website = models.URLField(blank=True)
-    admin = models.ForeignKey(EventUser, on_delete=models.CASCADE)
+    admin = models.ForeignKey(EventUser, on_delete=models.CASCADE, null=True, blank=True)
     
     # Service Information
-    category = models.ForeignKey(VendorCategory, on_delete=models.CASCADE, related_name='vendors')
+    category = models.ForeignKey(VendorCategory, on_delete=models.CASCADE, related_name='vendors', null=True, blank=True)
     services_offered = models.JSONField(default=list, help_text="List of specific services")
     
     # Location
     address = models.TextField(blank=True)
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=50)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=50, blank=True)
     zip_code = models.CharField(max_length=10, blank=True)
     service_radius_miles = models.PositiveIntegerField(
         default=25, 

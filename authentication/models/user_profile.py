@@ -61,26 +61,26 @@ class EventUser(AbstractUser):
     
     def has_role(self, role):
         """Check if user has a specific role"""
-        return role in self.event_roles or self.primary_role == role
+        return role in (self.auth0_roles or [])
     
     def add_role(self, role):
-        """Add a role to user's roles"""
-        if role not in self.event_roles:
-            self.event_roles.append(role)
+        """Add a role to user's auth0_roles"""
+        if not self.auth0_roles:
+            self.auth0_roles = []
+        if role not in self.auth0_roles:
+            self.auth0_roles.append(role)
             self.save()
     
     def remove_role(self, role):
-        """Remove a role from user's roles"""
-        if role in self.event_roles:
-            self.event_roles.remove(role)
+        """Remove a role from user's auth0_roles"""
+        if self.auth0_roles and role in self.auth0_roles:
+            self.auth0_roles.remove(role)
             self.save()
     
     @property
     def all_roles(self):
-        """Get all roles including primary role"""
-        roles = set(self.event_roles)
-        roles.add(self.primary_role)
-        return list(roles)
+        """Get all auth0 roles"""
+        return self.auth0_roles or []
     
     @property
     def is_bride_or_groom(self):
@@ -104,22 +104,17 @@ class EventUser(AbstractUser):
     
     @property
     def has_premium_access(self):
-        return self.subscription_tier in [self.PREMIUM, self.ENTERPRISE] and self.subscription_active
+        return 'premium' in (self.auth0_roles or [])
     
     @property
     def can_create_unlimited_events(self):
-        return self.has_premium_access or self.event_role == self.ORGANIZER
+        return self.has_premium_access or self.has_role(self.ORGANIZER)
     
     @property
     def max_events_allowed(self):
-        if self.subscription_tier == self.FREE:
-            return 1
-        elif self.subscription_tier == self.BASIC:
-            return 5
-        elif self.subscription_tier == self.PREMIUM:
-            return 25
-        else:  # ENTERPRISE
+        if self.has_premium_access:
             return 999
+        return 1
     
     def update_from_auth0(self, auth0_data):
         self.auth0_email = auth0_data.get('email', self.auth0_email)
@@ -148,10 +143,48 @@ class EventUser(AbstractUser):
         # Sync if it's been more than 1 hour since last sync
         return self.last_auth0_sync < timezone.now() - timedelta(hours=1)
     
+    # Auth0 Role Helper Methods
+    def has_auth0_permission(self, permission):
+        """Check if user has specific Auth0 permission"""
+        return permission in (self.auth0_permissions or [])
+    
+    def has_auth0_role(self, role):
+        """Check if user has specific Auth0 role"""
+        return role in (self.auth0_roles or [])
+    
+    # Wedding Service Specific Role Checks
+    @property
+    def is_bride_or_groom_auth0(self):
+        """Check if user is bride or groom via Auth0 roles"""
+        return self.has_auth0_role('bride_groom')
+    
+    @property
+    def is_wedding_planner_auth0(self):
+        """Check if user is wedding planner via Auth0 roles"""
+        return self.has_auth0_role('wedding_planner')
+    
+    @property
+    def is_vendor_owner_auth0(self):
+        """Check if user is vendor owner via Auth0 roles"""
+        return self.has_auth0_role('vendor_owner')
+    
+    @property
+    def is_vendor_staff_auth0(self):
+        """Check if user is vendor staff via Auth0 roles"""
+        return self.has_auth0_role('vendor_staff')
+    
+    @property
+    def is_super_admin_auth0(self):
+        """Check if user is super admin via Auth0 roles"""
+        return self.has_auth0_role('super_admin')
+
     @property
     def is_vendor_representative(self):
         """Check if user represents any vendors"""
-        return self.has_role(self.VENDOR_REPRESENTATIVE) or self.managed_vendors.exists()
+        return (self.has_auth0_role('vendor_owner') or 
+                self.has_auth0_role('vendor_staff') or 
+                self.has_role(self.VENDOR_REPRESENTATIVE) or 
+                self.managed_vendors.exists())
     
     @property
     def represented_vendors(self):
@@ -178,61 +211,24 @@ class EventUser(AbstractUser):
             return None
     
     def get_wedding_partner(self):
-        """Get the wedding partner if exists"""
-        if self.partner:
-            return self.partner
-        # Also check if someone has this user as their partner
-        try:
-            return EventUser.objects.get(partner=self)
-        except EventUser.DoesNotExist:
-            return None
+        """Get the wedding partner if exists - simplified for now"""
+        return None
     
     def link_wedding_partner(self, partner_user):
-        """Link two users as wedding partners"""
-        if self.is_bride_or_groom and partner_user.is_bride_or_groom:
-            self.partner = partner_user
-            partner_user.partner = self
-            
-            # Sync wedding details
-            if self.wedding_date:
-                partner_user.wedding_date = self.wedding_date
-            elif partner_user.wedding_date:
-                self.wedding_date = partner_user.wedding_date
-                
-            if self.wedding_venue:
-                partner_user.wedding_venue = self.wedding_venue
-            elif partner_user.wedding_venue:
-                self.wedding_venue = partner_user.wedding_venue
-            
-            self.save()
-            partner_user.save()
+        """Link two users as wedding partners - simplified for now"""
+        pass
     
     def get_shared_wedding_data(self):
-        """Get wedding data shared between partners"""
-        partner = self.get_wedding_partner()
+        """Get wedding data shared between partners - simplified for now"""
         return {
-            'wedding_date': self.wedding_date,
-            'wedding_venue': self.wedding_venue,
-            'guest_count_estimate': self.guest_count_estimate,
-            'partner': partner,
-            'is_couple': bool(partner),
+            'user_id': self.id,
+            'user_name': self.display_name,
+            'user_email': self.email,
         }
     
     def clean(self):
         super().clean()
-        if self.has_role(self.ORGANIZER) and not self.organization:
-            raise ValidationError('Organization is required for event organizers')
-        
-        if self.is_bride_or_groom and not self.wedding_date:
-            raise ValidationError('Wedding date is required for bride/groom roles')
-        
-        # Prevent same gender wedding roles being assigned to partners
-        if self.partner and self.is_bride_or_groom:
-            partner_bride_or_groom = self.partner.has_role(self.BRIDE) or self.partner.has_role(self.GROOM)
-            if partner_bride_or_groom:
-                if (self.has_role(self.BRIDE) and self.partner.has_role(self.BRIDE)) or \
-                   (self.has_role(self.GROOM) and self.partner.has_role(self.GROOM)):
-                    raise ValidationError('Wedding partners cannot have the same bride/groom role')
+        # Simplified validation - remove references to missing fields
     
     class Meta:
         verbose_name = "Event User"
